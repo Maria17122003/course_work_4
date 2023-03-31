@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "course-work"
+version = "0.1.0"
+description = ""
+authors = ["Maria <mararyabina62@gmail.com>"]
+readme = "README.md"
+packages = [{include = "course_work"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
