@@ -40,22 +40,24 @@ class HH(Engine):
         json_hh = json.loads(data)
         return json_hh
 
-    def info_vacancies(self, info):
+    def info_vacancies_hh(self, vacancies):
         data = {
                 'from': 'HeadHunter',
-                'name': info.get('name'),
-                'url': info.get('alternate_url'),
-                'description': info.get('snippet').get('responsibility'),
-                'salary': info.get('salary'),
-                'date_published': info.get('published_at'),
-                'experience': info.get('experience'),
-                'page_number': info.get('page')
+                'name': vacancies.get('name'),
+                'url': vacancies.get('alternate_url'),
+                'description': vacancies.get('snippet').get('responsibility'),
+                'payment_from': vacancies['salary']['from'],
+                'payment_to': vacancies['salary']['to'],
+                'salary': vacancies['salary']['currency'],
+                'date_published': vacancies.get('published_at'),
+                'experience': vacancies.get('experience'),
+                'page_number': vacancies.get('page')
                 }
 
         return data
 
     @property
-    def get_vacancies(self):
+    def get_vacancies_hh(self):
         vacancies_hh = []
         while len(vacancies_hh) <= 500:
             data = self.get_request()
@@ -64,14 +66,14 @@ class HH(Engine):
                 break
             for vacancy_hh in items:
                 if vacancy_hh.get('salary') is not None and vacancy_hh.get('salary').get('currency') == 'RUR':
-                    vacancies_hh.append(self.info_vacancies(vacancy_hh))
+                    vacancies_hh.append(self.info_vacancies_hh(vacancy_hh))
 
             self.params['page'] += 1
 
         return vacancies_hh
 
     def to_json(self, data):
-        with open("filename.json", "w", encoding="UTF-8") as name_file:
+        with open("vacancies_hh.json", "w", encoding="UTF-8") as name_file:
             json.dump(data, name_file, indent=2, ensure_ascii=False)
 
 
@@ -85,33 +87,35 @@ class Superjob(Engine):
 
     def get_request(self):
         api_key: str = os.getenv('api_key')
-        HEADERS = {
+        headers = {
             'Host': 'api.superjob.ru',
             'X-Api-App-Id': api_key,
             'Authorization': 'Bearer r.000000010000001.example.access_token',
             'Content-Type': 'application/x-www-form-urlencoded'
         }
-        response = requests.get(self.URL, headers=HEADERS, params=self.params)
+        response = requests.get(self.URL, headers=headers, params=self.params)
         data = response.content.decode()
         response.close()
 
         js_superjob = json.loads(data)
         return js_superjob
 
-    def info_vacancies(self, info):
+    def info_vacancies_sj(self, vacancies):
         data = {
                 'from': 'Superjob',
-                'name': info.get('profession'),
-                'url': info['link'],
-                'description': info.get('client').get('description'),
-                'salary': info['currency'],
-                'date_published': info['date_published']
+                'name': vacancies.get('profession'),
+                'url': vacancies['link'],
+                'description': vacancies.get('client').get('description'),
+                'payment_from': vacancies['payment_from'],
+                'payment_to': vacancies['payment_to'],
+                'salary': vacancies['currency'],
+                'date_published': vacancies['date_published']
                 }
 
         return data
 
     @property
-    def get_vacancies(self):
+    def get_vacancies_sj(self):
         vacancies_sj = []
         while len(vacancies_sj) <= 500:
             data = self.get_request()
@@ -119,15 +123,15 @@ class Superjob(Engine):
             if not items:
                 break
             for vacancy_sj in items:
-                if vacancy_sj.get('currency') is not None and vacancy_sj.get('currency') == 'rub':
-                    vacancies_sj.append(self.info_vacancies(vacancy_sj))
+                if vacancy_sj.get('payment_from') is not None and vacancy_sj.get('currency') == 'rub':
+                    vacancies_sj.append(self.info_vacancies_sj(vacancy_sj))
 
             self.params['page'] += 1
 
         return vacancies_sj
 
     def to_json(self, data):
-        with open("filename.json", "w", encoding="UTF-8") as name_file:
+        with open("vacancies_superjob.json", "w", encoding="UTF-8") as name_file:
             json.dump(data, name_file, indent=2, ensure_ascii=False)
 
 
@@ -141,18 +145,26 @@ class Vacancy:
     def __repr__(self):
         return f'Вакансия {self.name_vacancy} - зарплата {self.salary}'
 
+    def __lt__(self, other):
+        """
+        Сравнивает количество
+        подписчиков
+        """
+        if int(self.salary) < int(other.salary):
+            return True
+        return False
 
-if __name__ == '__main__':
-    hh = HH('Python')
-    info = hh.get_request()
-    print(len(info))
-    #pprint(info)
-    #vacancy = hh.get_vacancies
-    #print(len(vacancy))
-    #hh.to_json(vacancy)
-    #print(f"\n")
-    sj = Superjob('Python')
-    #pprint(sj.get_request())
-    vacancy = sj.get_vacancies
-    sj.to_json(vacancy)
-    print(len(vacancy))
+    def __gt__(self, other):
+        """
+        Сравнивает количество
+        подписчиков
+        """
+        if int(self.salary) > int(other.salary):
+            return True
+        return False
+
+
+class JSONSaver:
+    def add_vacancy(self):
+        like_vacancy = []
+
